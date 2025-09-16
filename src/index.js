@@ -4,6 +4,7 @@ import express from "express";
 import { auth } from "express-oauth2-jwt-bearer";
 import User from "./models/User.js";
 import cors from "cors";
+import Complaint from "./models/Complaint.js";
 
 mongoose
   .connect(process.env.MONGO_URI)
@@ -56,6 +57,29 @@ app.post("/api/sync-user", jwtCheck, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Error syncing user" });
+  }
+});
+
+app.post("/api/complaints", jwtCheck, async (req, res) => {
+  try {
+    const { zoneName, details } = req.body;
+    const auth0Id = req.auth.payload.sub;
+
+    if(!zoneName || !details) {
+      return res.status(400).json({ message: 'Zone and details are required.' });
+    }
+
+    const newComplaint = new Complaint({
+      zoneName,
+      details,
+      filedBy: auth0Id,
+    });
+
+    await newComplaint.save();
+    res.status(201).json(newComplaint);
+  } catch (error) {
+    console.error("Error saving complaint: ", error);
+    res.status(500).json({ message: 'Failed to file complaint.' });
   }
 });
 
